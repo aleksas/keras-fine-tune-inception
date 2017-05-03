@@ -1,3 +1,40 @@
+'''This script goes along the blog post
+"Building powerful image classification models using very little data"
+from blog.keras.io.
+It uses data that can be downloaded at:
+https://www.kaggle.com/c/dogs-vs-cats/data
+In our setup, we:
+- created a data/ folder
+- created train/ and validation/ subfolders inside data/
+- created cats/ and dogs/ subfolders inside train/ and validation/
+- put the cat pictures index 0-999 in data/train/cats
+- put the cat pictures index 1000-1400 in data/validation/cats
+- put the dogs pictures index 12500-13499 in data/train/dogs
+- put the dog pictures index 13500-13900 in data/validation/dogs
+So that we have 1000 training examples for each class, and 400 validation examples for each class.
+In summary, this is our directory structure:
+```
+data/
+    train/
+        dogs/
+            dog001.jpg
+            dog002.jpg
+            ...
+        cats/
+            cat001.jpg
+            cat002.jpg
+            ...
+    validation/
+        dogs/
+            dog001.jpg
+            dog002.jpg
+            ...
+        cats/
+            cat001.jpg
+            cat002.jpg
+            ...
+```
+'''
 from keras.applications.inception_v3 import InceptionV3
 from keras.preprocessing import image
 from keras.models import Model
@@ -12,20 +49,22 @@ import os.path
 base_model = InceptionV3(weights='imagenet', include_top=False)
 
 # dimensions of our images.
-#VGG19 size img_width, img_height = 224, 224
-#Inception size
+#Inception input size
 img_width, img_height = 299, 299
 
 top_layers_checkpoint_path = 'cp.top.best.hdf5'
 fine_tuned_checkpoint_path = 'cp.fine_tuned.best.hdf5'
 new_extended_inception_weights = 'final_weights.hdf5'
+
 train_data_dir = 'data/train'
 validation_data_dir = 'data/validation'
+
 nb_train_samples = 2000
 nb_validation_samples = 800
-top_epochs = 1
-fit_epochs = 1
-#batch_size = 16
+
+top_epochs = 50
+fit_epochs = 50
+
 batch_size = 24
 
 # add a global spatial average pooling layer
@@ -33,8 +72,7 @@ x = base_model.output
 x = GlobalAveragePooling2D()(x)
 # let's add a fully-connected layer
 x = Dense(1024, activation='relu')(x)
-# and a logistic layer -- let's say we have 200 classes
-#predictions = Dense(200, activation='softmax')(x)
+# and a logistic layer -- we have 2 classes
 predictions = Dense(2, activation='softmax')(x)
 
 # this is the model we will train
@@ -83,7 +121,6 @@ tb = TensorBoard(log_dir='./logs', histogram_freq=1, write_graph=True, write_ima
 # train the model on the new data for a few epochs
 #model.fit_generator(...)
 
-
 model.fit_generator(
     train_generator,
     steps_per_epoch=nb_train_samples // batch_size,
@@ -125,7 +162,6 @@ model.compile(optimizer=SGD(lr=0.0001, momentum=0.9), loss='categorical_crossent
 # we train our model again (this time fine-tuning the top 2 inception blocks
 # alongside the top Dense layers
 #model.fit_generator(...)
-
 
 model.fit_generator(
     train_generator,
