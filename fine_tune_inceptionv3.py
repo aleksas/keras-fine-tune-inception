@@ -56,8 +56,8 @@ top_layers_checkpoint_path = 'cp.top.best.hdf5'
 fine_tuned_checkpoint_path = 'cp.fine_tuned.best.hdf5'
 new_extended_inception_weights = 'final_weights.hdf5'
 
-train_data_dir = 'data/train'
-validation_data_dir = 'data/validation'
+train_data_dir = '/tmp/data/train'
+validation_data_dir = '/tmp/data/validation'
 
 nb_train_samples = 2000
 nb_validation_samples = 800
@@ -123,10 +123,10 @@ tb = TensorBoard(log_dir='./logs', histogram_freq=1, write_graph=True, write_ima
 
 model.fit_generator(
     train_generator,
-    steps_per_epoch=nb_train_samples // batch_size,
-    epochs=top_epochs,
+    samples_per_epoch=nb_train_samples // batch_size,
+    nb_epoch=top_epochs,
     validation_data=validation_generator,
-    validation_steps=nb_validation_samples // batch_size,
+    nb_val_samples=nb_validation_samples // batch_size,
     callbacks=[mc_top, tb])
 
 # at this point, the top layers are well trained and we can start fine-tuning
@@ -165,10 +165,10 @@ model.compile(optimizer=SGD(lr=0.0001, momentum=0.9), loss='categorical_crossent
 
 model.fit_generator(
     train_generator,
-    steps_per_epoch=nb_train_samples // batch_size,
-    epochs=fit_epochs,
+    samples_per_epoch=nb_train_samples // batch_size,
+    nb_epoch=fit_epochs,
     validation_data=validation_generator,
-    validation_steps=nb_validation_samples // batch_size,
+    nb_val_samples=nb_validation_samples // batch_size,
     callbacks=[mc_fit, tb])
 
 model.save_weights(new_extended_inception_weights)
