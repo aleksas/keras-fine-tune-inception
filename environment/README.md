@@ -20,7 +20,7 @@
 * From inside container `cpu` or `gpu` container run `jupyter notebook --ip='*'`.
 
 ### GPU
-`nvidia-docker run -i -t -v LOCAL_REPO_DIRECTORY:/tmp/model -p 8888:8888 -p 6006:6006 food_nutrition_classifier:gpu`
+`nvidia-docker run -i -t -v LOCAL_REPO_DIRECTORY:/tmp/model -p 8888:8888 -p 6006:6006 keras-fine-tune-inception:gpu`
 ### CPU
-`docker run -i -t -v LOCAL_REPO_DIRECTORY:/tmp/model -p 8888:8888 -p 6006:6006 food_nutrition_classifier:cpu`
+`docker run -i -t -v LOCAL_REPO_DIRECTORY:/tmp/model -p 8888:8888 -p 6006:6006 keras-fine-tune-inception:cpu`
 
