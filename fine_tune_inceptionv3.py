@@ -49,15 +49,15 @@ import os.path
 base_model = InceptionV3(weights='imagenet', include_top=False)
 
 # dimensions of our images.
-#Inception input size
+# Inception input size
 img_width, img_height = 299, 299
 
 top_layers_checkpoint_path = 'cp.top.best.hdf5'
 fine_tuned_checkpoint_path = 'cp.fine_tuned.best.hdf5'
 new_extended_inception_weights = 'final_weights.hdf5'
 
-train_data_dir = '/tmp/data/train'
-validation_data_dir = '/tmp/data/validation'
+train_data_dir = 'D:/data/train'
+validation_data_dir = 'D:/data/validation'
 
 nb_train_samples = 2000
 nb_validation_samples = 800
@@ -76,11 +76,11 @@ x = Dense(1024, activation='relu')(x)
 predictions = Dense(2, activation='softmax')(x)
 
 # this is the model we will train
-model = Model(input=base_model.input, output=predictions)
+model = Model(inputs=base_model.input, outputs=predictions)
 
 if os.path.exists(top_layers_checkpoint_path):
-	model.load_weights(top_layers_checkpoint_path)
-	print ("Checkpoint '" + top_layers_checkpoint_path + "' loaded.")
+    model.load_weights(top_layers_checkpoint_path)
+    print("Checkpoint '" + top_layers_checkpoint_path + "' loaded.")
 
 # first: train only the top layers (which were randomly initialized)
 # i.e. freeze all convolutional InceptionV3 layers
@@ -111,23 +111,33 @@ validation_generator = test_datagen.flow_from_directory(
     batch_size=batch_size,
     class_mode='categorical')
 
+# Save the model after every epoch.
+mc_top = ModelCheckpoint(top_layers_checkpoint_path, monitor='val_acc', verbose=0, save_best_only=True,
+                         save_weights_only=False, mode='auto', period=1)
 
-#Save the model after every epoch.
-mc_top = ModelCheckpoint(top_layers_checkpoint_path, monitor='val_acc', verbose=0, save_best_only=True, save_weights_only=False, mode='auto', period=1)
-
-#Save the TensorBoard logs.
+# Save the TensorBoard logs.
 tb = TensorBoard(log_dir='./logs', histogram_freq=1, write_graph=True, write_images=True)
 
 # train the model on the new data for a few epochs
-#model.fit_generator(...)
+# model.fit_generator(...)
 
 model.fit_generator(
     train_generator,
-    samples_per_epoch=nb_train_samples // batch_size,
-    nb_epoch=top_epochs,
+    steps_per_epoch=nb_train_samples // batch_size,
+    epochs=top_epochs,
     validation_data=validation_generator,
-    nb_val_samples=nb_validation_samples // batch_size,
+    validation_steps=nb_validation_samples // batch_size,
     callbacks=[mc_top, tb])
+# model.fit_generator(train_generator, steps_per_epoch=nb_train_samples, epochs=5,
+#                     validation_data=validation_generator, validation_steps=nb_validation_samples)
+
+# model.fit_generator(generator=train_generator,
+#                               steps_per_epoch=steps_per_epoch,
+#                               epochs=epochs,
+#                               callbacks=[model_checkpoint, tensorboard_callback],
+#                               validation_data=validation_generator,
+#                               validation_steps=validation_steps,
+#                               validation_freq=[1, 2, 10])
 
 # at this point, the top layers are well trained and we can start fine-tuning
 # convolutional layers from inception V3. We will freeze the bottom N layers
@@ -136,39 +146,41 @@ model.fit_generator(
 # let's visualize layer names and layer indices to see how many layers
 # we should freeze:
 for i, layer in enumerate(base_model.layers):
-   print(i, layer.name)
+    print(i, layer.name)
 
-
-#Save the model after every epoch.
-mc_fit = ModelCheckpoint(fine_tuned_checkpoint_path, monitor='val_acc', verbose=0, save_best_only=True, save_weights_only=False, mode='auto', period=1)
-
+# Save the model after every epoch.
+mc_fit = ModelCheckpoint(fine_tuned_checkpoint_path, monitor='val_acc', verbose=0, save_best_only=True,
+                         save_weights_only=False, mode='auto', period=1)
 
 if os.path.exists(fine_tuned_checkpoint_path):
-	model.load_weights(fine_tuned_checkpoint_path)
-	print ("Checkpoint '" + fine_tuned_checkpoint_path + "' loaded.")
+    model.load_weights(fine_tuned_checkpoint_path)
+    print("Checkpoint '" + fine_tuned_checkpoint_path + "' loaded.")
 
 # we chose to train the top 2 inception blocks, i.e. we will freeze
 # the first 172 layers and unfreeze the rest:
 for layer in model.layers[:172]:
-   layer.trainable = False
+    layer.trainable = False
 for layer in model.layers[172:]:
-   layer.trainable = True
+    layer.trainable = True
 
 # we need to recompile the model for these modifications to take effect
 # we use SGD with a low learning rate
-from keras.optimizers import SGD
+
+from tensorflow.keras.optimizers import SGD
+
 model.compile(optimizer=SGD(lr=0.0001, momentum=0.9), loss='categorical_crossentropy', metrics=['accuracy'])
 
 # we train our model again (this time fine-tuning the top 2 inception blocks
 # alongside the top Dense layers
-#model.fit_generator(...)
+# model.fit_generator(...)
+
 
 model.fit_generator(
     train_generator,
-    samples_per_epoch=nb_train_samples // batch_size,
-    nb_epoch=fit_epochs,
+    steps_per_epoch=nb_train_samples // batch_size,
+    epochs=top_epochs,
     validation_data=validation_generator,
-    nb_val_samples=nb_validation_samples // batch_size,
-    callbacks=[mc_fit, tb])
+    validation_steps=nb_validation_samples // batch_size,
+    callbacks=[mc_top, tb])
 
 model.save_weights(new_extended_inception_weights)
